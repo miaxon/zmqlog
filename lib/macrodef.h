@@ -16,7 +16,7 @@
 
 #define o(x) std::cout << x << std::endl
 
-#define ZMQLOG_IPC "/tmp/zmqlog.ipc"
+#define ZMQLOG_IPC "ipc:///tmp/zmqlog.ipc"
 
 #define LOG_INTERNAL_ST(x, y) auto x = y.logger_st()
 #define LOG_INTERNAL_MT(x, y) auto x = y.logger_mt()
