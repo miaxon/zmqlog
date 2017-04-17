@@ -1,0 +1,28 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/* 
+ * File:   def.h.in
+ * Author: alexcon
+ *
+ * Created on April 10, 2017, 1:51 PM
+ */
+
+#ifndef DEF_H_IN
+#define DEF_H_IN
+#define APP_NAME "${PROJECT_NAME}"
+#define APP_VER "${VERSION}"
+#define GIT_VERSION "${GIT_VERSION}"
+#define CORP_NAME "Monolit"
+#define DEF_TIMEOUT 30
+#define API_VER "0.1-dev"
+#define FORMAT_DATE "yyyy-MM-dd"
+#define FORMAT_TIME "hh:mm:ss"
+#define FORMAT_DATETIME "yyyy-MM-dd hh:mm:ss"
+
+
+#endif /* DEF_H_IN */
+
