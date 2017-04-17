@@ -20,7 +20,7 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 include_directories( 
-    "${CMAKE_SOURCE_DIR}/zlog", 
+    "${CMAKE_SOURCE_DIR}/lib", 
     "${CMAKE_SOURCE_DIR}/ini"
 )
 # Get source files list

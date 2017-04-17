@@ -19,8 +19,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -fPIC")
 set(CMAKE_INSTALL_RPATH "$ORIGIN")
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
-include_directories(
-    hpp)
+#include_directories(hpp)
 # Get source files list
 file(GLOB SRC_LIST *.cpp)
 

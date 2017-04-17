@@ -16,8 +16,11 @@
 #include "zlog.h"
 #include "zlogpull.h"
 using namespace std;
+using namespace zmqlog;
+
+
 static string tcp_endpoint("tcp://127.0.0.1:33353");
-static dmsz::log::zlogpull logpull;
+static zlogpull logpull;
 
 /*
  * 
@@ -26,10 +29,13 @@ static dmsz::log::zlogpull logpull;
 
 int main(int argc, char** argv) {
     //getchar();
-    auto logger = logpull.logger_s();
-    ZTRACE(logger, "  MT{}{}", 6, 7);
-    ZTRACE(logger, "  MT{}{}", 6, 7);
-    ZDEBUG(logger, "Support for int: {0:d};  hex: {0:x};  oct: {0:o}; bin: {0:b}", 42);
+    //auto log = logpull.logger_s();
+    //LOG_INTERNAL_MT(log, logpull);
+    LOG_TCP_MT(log, tcp_endpoint);
+    //LOG_IPC_ST(logger);    
+    //ZTRACE(logger, "  MT{}{}", 6, 7);
+    //ZTRACE(logger, "  MT{}{}", 6, 7);
+    ZDEBUG(log, "Support for int: {0:d};  hex: {0:x};  oct: {0:o}; bin: {0:b}", 42);
 
 
     getchar();

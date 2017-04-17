@@ -17,22 +17,21 @@
 #include <zmqpp/zmqpp.hpp>
 #include <zmqpp/proxy.hpp>
 
-namespace dmsz {
-    namespace log {
 
-        class zlogworker {
-        public:
-            zlogworker(zmqpp::context& ctx, std::string& endpoint);
-            virtual ~zlogworker();
-            void work();
-        private:
-            void log(zmqpp::message& msg);
-            std::string m_endpoint;
-            zmqpp::context& m_ctx;
-            zmqpp::socket m_zsock;
+namespace zmqlog {
 
-        };
-    }
+    class zlogworker {
+    public:
+        zlogworker(zmqpp::context& ctx, std::string& endpoint);
+        virtual ~zlogworker();
+        void work();
+    private:
+        void log(zmqpp::message& msg);
+        std::string m_endpoint;
+        zmqpp::context& m_ctx;
+        zmqpp::socket m_zsock;
+
+    };
 }
 #endif /* ZLOGWORKER_H */
 
