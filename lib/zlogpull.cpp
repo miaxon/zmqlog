@@ -45,7 +45,7 @@ namespace zmqlog {
         m_inp_endpoint = "inproc://" + uuid();
         m_tcp_endpoint = "tcp://0.0.0.0:33353";
         m_ctl_endpoint = "tcp://0.0.0.0:33355";
-        m_ipc_endpoint = "ipc:///tmp/zmqlog.ipc";
+        m_ipc_endpoint = "ipc://" + ZMQLOG_IPC;
     }
 
     zlogst_ptr
