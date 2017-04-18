@@ -28,10 +28,10 @@ static zlogpull logpull;
 
 
 int main(int argc, char** argv) {
-    //getchar();
+    getchar();
     //auto log = logpull.logger_s();
     //LOG_INTERNAL_MT(log, logpull);
-    LOG_TCP_MT(log, tcp_endpoint);
+    LOG_MT(log, zmqlog::frontend::ipc);
     //LOG_IPC_ST(logger);    
     //ZTRACE(logger, "  MT{}{}", 6, 7);
     //ZTRACE(logger, "  MT{}{}", 6, 7);

@@ -22,191 +22,205 @@ using namespace zmqlog;
 
 namespace zmqlog {
 
-    zlogpull::zlogpull() :
-    m_ctx(),
-    m_tcp(m_ctx, socket_type::pull),
-    m_ipc(m_ctx, socket_type::pull),
-    m_inp(m_ctx, socket_type::pull),
-    m_ctl(m_ctx, socket_type::reply),
-    m_run(true)
-    {
-        if(!::access("/tmp/zmqlog.ipc", 0))
-            throw std::logic_error("zlogpull can run one instance only.");
+zlogpull::zlogpull() :
+m_ctx(),
+m_tcp(m_ctx, socket_type::pull),
+m_ipc(m_ctx, socket_type::pull),
+m_inp(m_ctx, socket_type::pull),
+m_ctl(m_ctx, socket_type::reply),
+m_run(true)
+{
+    init();
+    o(zutils::zuud());
+}
+
+void
+zlogpull::init()
+{
+    m_sem = sem_open(ZMQLOG_SEM, O_CREAT | O_EXCL);
+    if (m_sem == SEM_FAILED) {
+        throw zlog_ex("zlogpull can run one instance only", errno);
+    } else {
         ::pipe2(m_pipe, O_CLOEXEC);
         set_endpoints();
         m_fut = async(launch::async, &zlogpull::run, this);
     }
+}
 
-    void
-    zlogpull::set_endpoints()
-    {
-        //char name[7] = "XXXXXX";
-        //m_inp_endpoint = fmt::format("inproc://{}", ::mktemp(name));
-        m_inp_endpoint = "inproc://" + uuid();
-        m_tcp_endpoint = "tcp://0.0.0.0:33353";
-        m_ctl_endpoint = "tcp://0.0.0.0:33355";
-        m_ipc_endpoint = ZMQLOG_IPC;
+void
+zlogpull::set_endpoints()
+{
+    m_inp_endpoint = fmt::format("inproc://z_{}", zutils::zuud());
+    m_tcp_endpoint = ZMQLOG_TCP;
+    m_ctl_endpoint = ZMQLOG_TCP_CTL;
+    m_ipc_endpoint = fmt::format("ipc:///temp/z_{}", zutils::zuud());;
+}
+
+zlogst_ptr
+zlogpull::logger_st()
+{
+    zlogst_ptr p(new zlogst(&m_ctx, m_inp_endpoint));
+    return p;
+}
+
+zlogmt_ptr
+zlogpull::logger_mt()
+{
+    zlogmt_ptr p(new zlogmt(&m_ctx, m_inp_endpoint));
+    return p;
+}
+
+void
+zlogpull::start()
+{
+    if (!m_run) {
+        m_run = true;
+        m_fut = async(launch::async, &zlogpull::run, this);
     }
+}
 
-    zlogst_ptr
-    zlogpull::logger_st()
-    {
-        zlogst_ptr p(new zlogst(&m_ctx, m_inp_endpoint));
-        return p;
+void
+zlogpull::stop()
+{
+    if (m_run) {
+        o("stopping ...");
+        m_run = false;
+        poll_cancel();
+        m_fut.wait();
+        m_tcp.unbind(m_tcp_endpoint);
+        m_ipc.unbind(m_ipc_endpoint);
+        m_inp.unbind(m_inp_endpoint);
+        m_ctl.unbind(m_ctl_endpoint);
     }
+}
 
-    zlogmt_ptr
-    zlogpull::logger_mt()
-    {
-        zlogmt_ptr p(new zlogmt(&m_ctx, m_inp_endpoint));
-        return p;
-    }
+zlogpull::~zlogpull()
+{
+    stop();
+    ::close(m_pipe[0]);
+    ::close(m_pipe[1]);
+    sem_unlink(ZMQLOG_SEM);
+    sem_close(m_sem);
+}
 
-    string
-    zlogpull::uuid()
-    {
-        uuid_t uuid;
-        uuid_generate(uuid);
-        char uuid_str[37];
-        uuid_unparse_lower(uuid, uuid_str);
-        return string(uuid_str);
-    }
-
-    void
-    zlogpull::start()
-    {
-        if (!m_run) {
-            m_run = true;
-            m_fut = async(launch::async, &zlogpull::run, this);
-        }
-    }
-
-    void
-    zlogpull::stop()
-    {
-        if (m_run) {
-            o("stopping ...");
-            m_run = false;
-            poll_cancel();
-            m_fut.wait();
-            m_tcp.unbind(m_tcp_endpoint);
-            m_ipc.unbind(m_ipc_endpoint);
-            m_inp.unbind(m_inp_endpoint);
-            m_ctl.unbind(m_ctl_endpoint);
-        }
-    }
-
-    zlogpull::~zlogpull()
-    {
-        stop();
-        ::close(m_pipe[0]);
-        ::close(m_pipe[1]);
-    }
-
-    bool
-    zlogpull::run()
-    {
-
+bool
+zlogpull::run()
+{
+    try {
         m_tcp.bind(m_tcp_endpoint);
         m_ipc.bind(m_ipc_endpoint);
         m_inp.bind(m_inp_endpoint);
-        m_ctl.bind(m_ctl_endpoint);
-
-        zmqpp::reactor reactor;
-        reactor.add(m_tcp, bind(&zlogpull::in_tcp, this));
-        reactor.add(m_ipc, bind(&zlogpull::in_ipc, this));
-        reactor.add(m_inp, bind(&zlogpull::in_inp, this));
-        reactor.add(m_ctl, bind(&zlogpull::in_ctl, this));
-        reactor.add(m_pipe[0], bind(&zlogpull::poll_reset, this));
-        while (m_run) {
-            try {
-                reactor.poll();
-            } catch (zmqpp::exception& e) {
-                cout << "~poll " << e.what() << endl;
-            }
+        m_ctl.connect(m_ctl_endpoint);
+    } catch (zmqpp::exception& e) {
+        o(e.what());
+    }
+    zmqpp::reactor reactor;
+    reactor.add(m_tcp, bind(&zlogpull::in_tcp, this));
+    reactor.add(m_ipc, bind(&zlogpull::in_ipc, this));
+    reactor.add(m_inp, bind(&zlogpull::in_inp, this));
+    reactor.add(m_ctl, bind(&zlogpull::in_ctl, this));
+    reactor.add(m_pipe[0], bind(&zlogpull::poll_reset, this));
+    while (m_run) {
+        try {
+            reactor.poll();
+        } catch (zmqpp::exception& e) {
+            o(e.what());
         }
-        o("~run returned");
-        //reactor.remove(m_pipe[0]); //crash with sigseg why??
-        reactor.remove(m_ctl);
-        reactor.remove(m_inp);
-        reactor.remove(m_ipc);
-        reactor.remove(m_tcp);
-        return true;
     }
+    o("~run returned");
+    //reactor.remove(m_pipe[0]); //crash with sigseg why??
+    reactor.remove(m_ctl);
+    reactor.remove(m_inp);
+    reactor.remove(m_ipc);
+    reactor.remove(m_tcp);
+    return true;
+}
 
-    void
-    zlogpull::poll_cancel()
-    {
-        o("poll_cancel ...");
-        char dummy = 1;
-        ::write(m_pipe[1], &dummy, 1);
-    }
+void
+zlogpull::poll_cancel()
+{
+    o("poll_cancel ...");
+    char dummy = 1;
+    ::write(m_pipe[1], &dummy, 1);
+}
 
-    void
-    zlogpull::poll_reset()
-    {
-        o("poll_reset ...");
-        char dummy = 0;
-        ::read(m_pipe[0], &dummy, 1);
-    }
+void
+zlogpull::poll_reset()
+{
+    o("poll_reset ...");
+    char dummy = 0;
+    ::read(m_pipe[0], &dummy, 1);
+}
 
-    void
-    zlogpull::route(message & msg) const
-    {
-        o(msg.get(0));
-    }
-
-    void
-    zlogpull::in_tcp()
-    {
-        if (!m_run) return;
-        message msg;
-        m_tcp.receive(msg);
-        if (msg.parts())
-            route(msg);
-    }
-
-    void
-    zlogpull::in_ipc()
-    {
-        if (!m_run) return;
-        zmqpp::message msg;
-        m_ipc.receive(msg);
-        if (msg.parts())
-            route(msg);
-    }
-
-    void
-    zlogpull::in_inp()
-    {
-        if (!m_run) return;
-        message msg;
-        m_inp.receive(msg);
-        if (msg.parts())
-            route(msg);
-    }
-
-    void
-    zlogpull::in_ctl()
-    {
-        if (!m_run) return;
-        o("in_ctl");
-        message msg;
-        m_ctl.receive(msg);
-        if (msg.is_signal() || !msg.parts()) return;
-        message ret;
-        int cmd;
-        msg.get(cmd, 0);
-        if (cmd == (int) cmd::endpoint) {
-            int proto;
-            msg.get(proto, 1);
-            if (proto == (int) proto::ipc)
-                ret << m_ipc_endpoint;
-            if (proto == (int) proto::tcp)
-                ret << m_tcp_endpoint;
-            m_ctl.send(ret);
+void
+zlogpull::handle_cmd(const message& req, message& rsp)
+{
+    int n;
+    req.get(n, 0);
+    command cmd = static_cast<command> (n);
+    switch (cmd) {
+        case command::get_frontend:
+        {
+            int n;
+            req.get(n, 1);
+            frontend fend = static_cast<frontend> (n);
+            if (fend == frontend::ipc)
+                rsp << m_ipc_endpoint;
+            if (fend == frontend::tcp)
+                rsp << "tcp://192.168.255.251:33353";
         }
-
-
+        default:
+            rsp << "";
     }
+}
+
+void
+zlogpull::route(message & msg) const
+{
+    o(msg.get(0));
+}
+
+void
+zlogpull::in_tcp()
+{
+    if (!m_run) return;
+    message msg;
+    m_tcp.receive(msg);
+    if (msg.parts())
+        route(msg);
+}
+
+void
+zlogpull::in_ipc()
+{
+    if (!m_run) return;
+    zmqpp::message msg;
+    m_ipc.receive(msg);
+    if (msg.parts())
+        route(msg);
+}
+
+void
+zlogpull::in_inp()
+{
+    if (!m_run) return;
+    message msg;
+    m_inp.receive(msg);
+    if (msg.parts())
+        route(msg);
+}
+
+void
+zlogpull::in_ctl()
+{
+    if (!m_run) return;
+    o("in_ctl");
+    message msg;
+    message rsp;
+    m_ctl.receive(msg);
+    if (msg.parts())
+        handle_cmd(msg, rsp);
+    m_ctl.send(rsp);
+
+}
 }

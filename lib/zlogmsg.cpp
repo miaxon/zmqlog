@@ -12,23 +12,26 @@
  */
 
 #include "zlogmsg.h"
-namespace dmsz {
-    namespace log {
 
-        zlogmsg::zlogmsg() {
-        }
+namespace zmqlog {
 
-        zlogmsg::~zlogmsg() {
-        }
-
-        void
-        zlogmsg::set_timestamp() {
-            using namespace std;
-            using namespace chrono;
-            auto now = system_clock::now();
-            auto ms = duration_cast< milliseconds >(now.time_since_epoch());
-            time_t unix_time = duration_cast< seconds >(ms).count();
-            *this <<  fmt::format("[ {:%Y-%m-%d %H:%M:%S}]", *localtime(&unix_time));
-        }
-    }
+zlogmsg::zlogmsg()
+{
 }
+
+zlogmsg::~zlogmsg()
+{
+}
+
+void
+zlogmsg::set_timestamp()
+{
+    using namespace std;
+    using namespace chrono;
+    auto now = system_clock::now();
+    auto ms = duration_cast< milliseconds >(now.time_since_epoch());
+    time_t unix_time = duration_cast< seconds >(ms).count();
+    *this << fmt::format("[ {:%Y-%m-%d %H:%M:%S}]", *localtime(&unix_time));
+}
+}
+

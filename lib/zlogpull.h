@@ -30,9 +30,7 @@
 
 namespace zmqlog {
 
-    enum cmd {
-        endpoint
-    };
+    
 
     class zlogpull {
     public:
@@ -52,8 +50,9 @@ namespace zmqlog {
         void in_ctl();
         void poll_reset();
         void poll_cancel();
-        std::string uuid();
         void set_endpoints();
+        void handle_cmd(const zmqpp::message& req, zmqpp::message& rsp);
+        void init();
     private:
         zmqpp::context m_ctx;
         zmqpp::socket m_tcp;
@@ -61,12 +60,15 @@ namespace zmqlog {
         zmqpp::socket m_inp;
         zmqpp::socket m_ctl; // control channel
         volatile bool m_run;
+        int m_frontend;
         std::future<bool> m_fut;
         std::string m_tcp_endpoint;
         std::string m_ipc_endpoint;
         std::string m_ctl_endpoint;
         std::string m_inp_endpoint;
         int m_pipe[2];
+        sem_t* m_sem;
+        
 
 
     };

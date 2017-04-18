@@ -18,7 +18,9 @@
 #include <iostream>
 #include <chrono>
 #include <mutex>
-#include <uuid/uuid.h>
+#include <fcntl.h>           
+#include <sys/stat.h>       
+#include <semaphore.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/time.h>
@@ -26,28 +28,42 @@
 
 #include "macrodef.h"
 #include "zlogmsg.h"
-
+#include "zutils.h"
 
 
 namespace zmqlog {
 
-    enum FACILITY {
-        STARTUP,
-        CORE
-    };
+    typedef enum {
+        get_frontend = 1
+    } command;
 
-    enum LEVEL {
-        INFO,
-        WARNING,
-        ERROR,
-        FATAL
-    };
+    typedef enum {
+        stdout = 1,
+        file = 2,
+        network = 4,
+        database = 8
+    } sink;
 
-    enum proto {
-        tcp,
-        ipc,
-        inproc
-    };
+    typedef enum {
+        startup,
+        core
+    } facility;
+
+    typedef enum {
+        trace = 0,
+        debug,
+        info,
+        warn,
+        err,
+        critical,
+        off = 6
+    } level;
+
+    typedef enum {
+        inproc = 1,
+        ipc = 2,
+        tcp = 4
+    } frontend;
 
     struct null_lock_t {
 
@@ -65,6 +81,24 @@ namespace zmqlog {
         }
     };
 
+    class zlog_ex : public std::exception {
+    public:
+
+        zlog_ex(const std::string& msg) : _msg(msg) {
+        }
+
+        zlog_ex(const std::string& msg, int last_errno) {
+            _msg = msg + ": " + ::strerror(last_errno);
+        }
+
+        const char* what() const noexcept override {
+            return _msg.c_str();
+        }
+    private:
+        std::string _msg;
+
+    };
+
     template < typename LOCK >
     class zlog {
     public:
@@ -73,40 +107,36 @@ namespace zmqlog {
 
         zlog(zmqpp::context* pull_ctx, zmqpp::endpoint_t& endpoint) :
         m_push(*pull_ctx, zmqpp::socket_type::push),
-        m_proto(zmqlog::proto::inproc) {
+        m_frontend(zmqlog::frontend::inproc) {
             m_push.connect(endpoint);
         }
 
-        // ipc logger
-
-        zlog() :
-        m_ctx(),
-        m_push(m_ctx, zmqpp::socket_type::push),
-        m_proto(zmqlog::proto::ipc) {
-            m_push.connect("ipc:///tmp/zmqlog.ipc");
-        }
-        
         // tcp logger
 
-        zlog(zmqpp::endpoint_t& endpoint) :
+        zlog(zmqlog::frontend f_end) :
         m_ctx(),
         m_push(m_ctx, zmqpp::socket_type::push),
-        m_proto(zmqlog::proto::tcp) {
-            m_push.connect(endpoint);
+        m_frontend(f_end) {
+            if (m_frontend == zmqlog::frontend::inproc) {
+                throw new zmqlog::zlog_ex("iproc frontend not available for this context.");
+            } else {
+                std::string ep = get_frontend(m_frontend);
+                m_push.connect(ep);
+            }
         }
 
         virtual ~zlog() {
             o("~zlog");
         };
 
-        zmqlog::proto
-        proto() {
-            return m_proto;
+        zmqlog::frontend
+        type() {
+            return m_frontend;
         }
 
         std::string
-        protostring() {
-            switch (m_proto) {
+        typestring() {
+            switch (m_frontend) {
                 case tcp:
                     return "tcp";
                 case ipc:
@@ -143,7 +173,7 @@ namespace zmqlog {
     private:
         zmqpp::context m_ctx;
         zmqpp::socket m_push;
-        zmqlog::proto m_proto;
+        zmqlog::frontend m_frontend;
         std::shared_ptr< LOCK > m_lock{ std::make_shared< LOCK >()};
         fmt::MemoryWriter m_fmt;
     private:
@@ -154,6 +184,21 @@ namespace zmqlog {
             m_fmt.write(fmt, args...);
             m_push.send(m_fmt.str(), true);
             m_fmt.clear();
+        }
+
+        std::string get_frontend(frontend fend) {
+            zmqpp::socket s(m_ctx, zmqpp::socket_type::request);
+            s.bind("tcp://*:33355");
+            zmqpp::message req;
+            req.add(zmqlog::command::get_frontend);
+            req.add(fend);
+            s.send(req, zmqpp::socket::send_more);
+            s.send(req);
+            std::string rsp;
+            s.receive(rsp);
+            o(rsp);
+            s.close();
+            return rsp;
         }
     };
     using zlogst = zlog<null_lock_t>;
