@@ -31,7 +31,6 @@ m_ctl(m_ctx, socket_type::reply),
 m_run(true)
 {
     init();
-    o(zutils::zuud());
 }
 
 void
@@ -44,6 +43,7 @@ zlogpull::init()
         ::pipe2(m_pipe, O_CLOEXEC);
         set_endpoints();
         m_fut = async(launch::async, &zlogpull::run, this);
+        o(GIT_VERSION);
     }
 }
 
@@ -53,7 +53,7 @@ zlogpull::set_endpoints()
     m_inp_endpoint = fmt::format("inproc://z_{}", zutils::zuud());
     m_tcp_endpoint = ZMQLOG_TCP;
     m_ctl_endpoint = ZMQLOG_TCP_CTL;
-    m_ipc_endpoint = fmt::format("ipc:///temp/z_{}", zutils::zuud());;
+    m_ipc_endpoint = fmt::format("ipc:///tmp/z_{}", zutils::zuud());
 }
 
 zlogst_ptr
@@ -106,6 +106,8 @@ zlogpull::~zlogpull()
 bool
 zlogpull::run()
 {
+    o("running ...");
+
     try {
         m_tcp.bind(m_tcp_endpoint);
         m_ipc.bind(m_ipc_endpoint);
@@ -214,7 +216,6 @@ void
 zlogpull::in_ctl()
 {
     if (!m_run) return;
-    o("in_ctl");
     message msg;
     message rsp;
     m_ctl.receive(msg);

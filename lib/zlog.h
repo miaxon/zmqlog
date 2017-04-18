@@ -196,7 +196,6 @@ namespace zmqlog {
             s.send(req);
             std::string rsp;
             s.receive(rsp);
-            o(rsp);
             s.close();
             return rsp;
         }

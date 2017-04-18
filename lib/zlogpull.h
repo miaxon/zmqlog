@@ -25,7 +25,7 @@
 #include <fcntl.h>
 #include "macrodef.h"
 #include "zlog.h"
-
+#include "def.h"
 
 
 namespace zmqlog {
