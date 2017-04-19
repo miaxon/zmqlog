@@ -188,15 +188,29 @@ namespace zmqlog {
 
         std::string get_frontend(frontend fend) {
             zmqpp::socket s(m_ctx, zmqpp::socket_type::request);
-            s.bind("tcp://*:33355");
+            if (fend == frontend::ipc) {
+                try {
+                    // zlogpull on same host
+                    s.connect("tcp://localhost:33355");
+                } catch (zmqpp::exception& e) {
+                    o(e.what());
+                }
+            } else {
+                s.connect("???"); // TODO: discover network!!
+            }
+            
             zmqpp::message req;
-            req.add(zmqlog::command::get_frontend);
-            req.add(fend);
-            s.send(req, zmqpp::socket::send_more);
-            s.send(req);
             std::string rsp;
-            s.receive(rsp);
-            s.close();
+            try {
+                req.add(zmqlog::command::get_frontend);
+                req.add(fend);
+                s.send(req);
+                o("connect");
+                s.receive(rsp);
+                s.close();
+            } catch (zmqpp::exception& e) {
+                o(e.what());
+            }
             return rsp;
         }
     };

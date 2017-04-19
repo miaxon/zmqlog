@@ -36,15 +36,15 @@ m_run(true)
 void
 zlogpull::init()
 {
-    m_sem = sem_open(ZMQLOG_SEM, O_CREAT | O_EXCL);
-    if (m_sem == SEM_FAILED) {
-        throw zlog_ex("zlogpull can run one instance only", errno);
-    } else {
+    //m_sem = sem_open(ZMQLOG_SEM, O_CREAT | O_EXCL);
+    //if (m_sem == SEM_FAILED) {
+    //    throw zlog_ex("zlogpull can run one instance only", errno);
+    //} else {
         ::pipe2(m_pipe, O_CLOEXEC);
         set_endpoints();
         m_fut = async(launch::async, &zlogpull::run, this);
         o(GIT_VERSION);
-    }
+    //}
 }
 
 void
@@ -99,8 +99,8 @@ zlogpull::~zlogpull()
     stop();
     ::close(m_pipe[0]);
     ::close(m_pipe[1]);
-    sem_unlink(ZMQLOG_SEM);
-    sem_close(m_sem);
+    //sem_unlink(ZMQLOG_SEM);
+    //sem_close(m_sem);
 }
 
 bool
@@ -112,7 +112,7 @@ zlogpull::run()
         m_tcp.bind(m_tcp_endpoint);
         m_ipc.bind(m_ipc_endpoint);
         m_inp.bind(m_inp_endpoint);
-        m_ctl.connect(m_ctl_endpoint);
+        m_ctl.bind(m_ctl_endpoint);
     } catch (zmqpp::exception& e) {
         o(e.what());
     }
@@ -206,6 +206,7 @@ void
 zlogpull::in_inp()
 {
     if (!m_run) return;
+    
     message msg;
     m_inp.receive(msg);
     if (msg.parts())
@@ -216,6 +217,7 @@ void
 zlogpull::in_ctl()
 {
     if (!m_run) return;
+    o("in_ctl");
     message msg;
     message rsp;
     m_ctl.receive(msg);

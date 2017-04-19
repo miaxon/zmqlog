@@ -29,6 +29,6 @@ file(GLOB H_LIST *.h)
 
 
 add_executable(zmqlog ${SRC_LIST} ${H_LIST})
-target_link_libraries(zmqlog zlog pthread)
+target_link_libraries(zmqlog zmqpp zmq fmt zlog )
 
 
