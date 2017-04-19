@@ -189,21 +189,6 @@ namespace zmqlog {
             m_sock.send(m_fmt.str(), true);
             m_fmt.clear();
         }
-
-        std::string get_frontend(frontend fend) {
-            zmqpp::socket s(m_ctx, zmqpp::socket_type::request);
-            s.bind("tcp://*:33355");
-            zmqpp::message req;
-            req.add(zmqlog::command::get_frontend);
-            req.add(fend);
-            s.send(req, zmqpp::socket::send_more);
-            s.send(req);
-            std::string rsp;
-            s.receive(rsp);
-            o(rsp);
-            s.close();
-            return rsp;
-        }
     };
     using zlogst = zlog<null_lock_t>;
     using zlogmt = zlog<std::mutex>;

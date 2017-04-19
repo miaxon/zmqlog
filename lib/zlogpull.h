@@ -23,6 +23,8 @@
 #include <future>
 #include <unistd.h>
 #include <fcntl.h>
+
+#include "def.h"
 #include "macrodef.h"
 #include "zlog.h"
 
@@ -52,6 +54,8 @@ namespace zmqlog {
         void handle_cmd(const zmqpp::message& req, zmqpp::message& rsp);
         void init();
         bool self_run(zmqpp::socket* pipe);
+        void self_log(std::string msg);
+        std::string about();
     private:
         // initialization list
         zmqpp::context m_ctx;
@@ -60,8 +64,7 @@ namespace zmqlog {
         zmqpp::socket m_inp;
         zmqpp::socket m_ctl; // control channel   
         volatile bool m_run;
-        //zmqpp::actor::ActorStartRoutine m_routine;
-        //zmqpp::actor m_self;
+        zmqpp::actor m_self;
         // end of inititalization list
         std::future<bool> m_fut;
         std::string m_tcp_endpoint;

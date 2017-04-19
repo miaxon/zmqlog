@@ -28,12 +28,10 @@ m_tcp(m_ctx, socket_type::pull),
 m_ipc(m_ctx, socket_type::pull),
 m_inp(m_ctx, socket_type::pull),
 m_ctl(m_ctx, socket_type::reply),
-m_run(true)
-//,
-//m_routine(&self_run),
-//m_self(m_routine)
+m_run(true),
+m_self(bind(&zlogpull::self_run, this, placeholders::_1))
 {
-    init();
+    init();    
 }
 
 void
@@ -215,7 +213,7 @@ void
 zlogpull::in_ctl()
 {
     if (!m_run) return;
-    o("in_ctl");
+    self_log("in_ctl");
     message msg;
     message rsp;
     m_ctl.receive(msg);
@@ -224,16 +222,28 @@ zlogpull::in_ctl()
     m_ctl.send(rsp);
 
 }
-
+void 
+zlogpull::self_log(string msg)
+{
+    m_self.pipe()->send(msg, true);
+}
+string
+zlogpull::about()
+{
+    return fmt::format("{} {}\ngit version:{}\ngit url: https://github.com/miaxon/zmqlog.git\nauthor: alexcon315@gmail.com\n{} {} \n", 
+            APP_NAME, APP_VER, GIT_VERSION, __DATE__, __TIME__);
+}
 bool
 zlogpull::self_run(zmqpp::socket* pipe)
 {
     message msg;
     signal sig;
     pipe->send(signal::ok);
+    o(about());
     while (pipe->receive(msg)) {
         if (msg.is_signal()) {
             msg.get(sig, 0);
+            
             if (sig == zmqpp::signal::stop)
                 break;
         }
