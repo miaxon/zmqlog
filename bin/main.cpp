@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
     getchar();
     //auto log = logpull.logger_s();
     //LOG_INTERNAL_MT(log, logpull);
-    LOG_MT(log, zmqlog::frontend::ipc);
+    LOG_IPC_MT(log);
     //LOG_IPC_ST(logger);    
     //ZTRACE(logger, "  MT{}{}", 6, 7);
     //ZTRACE(logger, "  MT{}{}", 6, 7);

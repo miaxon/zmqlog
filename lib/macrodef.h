@@ -17,15 +17,20 @@
 #define o(x) std::cout << x << std::endl
 #define e(x) std::cerr << x << std::endl
 
-#define ZMQLOG_SEM "zmq_logpull_semaphore_one"
-#define ZMQLOG_TCP "tcp://0.0.0.0:33353"
-#define ZMQLOG_TCP_CTL "tcp://0.0.0.0:33355"
+#define ZLOG_SEM "zmq_logpull_semaphore_one"
+#define ZNODE_IPC "ipc:///tmp/.zlog_ipc_pipe"
+#define ZNODE_INTERNAL "inproc:///zlog_inproc_pipe"
+#define ZNODE_TCP "tcp://0.0.0.0:33353"
+#define ZNODE_TCP_CTL "tcp://0.0.0.0:33355"
 
 #define LOG_INTERNAL_ST(x, y) auto x = y.logger_st()
 #define LOG_INTERNAL_MT(x, y) auto x = y.logger_mt()
 
-#define LOG_ST(x, y) zlogst_ptr x(new zlogst(y))
-#define LOG_MT(x, y) zlogmt_ptr x(new zlogmt(y))
+#define LOG_TCP_ST(x, y) zlogst_ptr x(new zlogst(y))
+#define LOG_TCP_MT(x, y) zlogmt_ptr x(new zlogmt(y))
+
+#define LOG_IPC_ST(x) zlogst_ptr x(new zlogst())
+#define LOG_IPC_MT(x) zlogmt_ptr x(new zlogmt())
 
 
 #define ZSTR_H(x) #x

@@ -111,18 +111,27 @@ namespace zmqlog {
             m_push.connect(endpoint);
         }
 
-        // tcp logger
+        // ipc logger
 
-        zlog(zmqlog::frontend f_end) :
+        zlog() :
         m_ctx(),
         m_push(m_ctx, zmqpp::socket_type::push),
-        m_frontend(f_end) {
+        m_frontend(zmqlog::frontend::ipc) {
             if (m_frontend == zmqlog::frontend::inproc) {
                 throw new zmqlog::zlog_ex("iproc frontend not available for this context.");
             } else {
                 std::string ep = get_frontend(m_frontend);
                 m_push.connect(ep);
             }
+        }
+        
+        // tcp logger
+
+        zlog(zmqpp::endpoint_t endpoint) :
+        m_ctx(),
+        m_push(m_ctx, zmqpp::socket_type::push),
+        m_frontend(zmqlog::frontend::tcp) {
+            m_push.connect(endpoint);
         }
 
         virtual ~zlog() {

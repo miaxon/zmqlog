@@ -37,8 +37,8 @@ m_run(true)
 void
 zlogpull::init()
 {
-    m_sem = sem_open(ZMQLOG_SEM, O_CREAT | O_EXCL);
-    if (m_sem == SEM_FAILED) {
+    m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL);
+    if (m_sem != SEM_FAILED) {
         throw zlog_ex("zlogpull can run one instance only", errno);
     } else {
         ::pipe2(m_pipe, O_CLOEXEC);
@@ -50,10 +50,10 @@ zlogpull::init()
 void
 zlogpull::set_endpoints()
 {
-    m_inp_endpoint = fmt::format("inproc://z_{}", zutils::zuud());
-    m_tcp_endpoint = ZMQLOG_TCP;
-    m_ctl_endpoint = ZMQLOG_TCP_CTL;
-    m_ipc_endpoint = fmt::format("ipc:///temp/z_{}", zutils::zuud());;
+    m_inp_endpoint = ZNODE_INTERNAL;
+    m_tcp_endpoint = ZNODE_TCP;
+    m_ctl_endpoint = ZNODE_TCP_CTL;
+    m_ipc_endpoint = ZNODE_IPC;
 }
 
 zlogst_ptr
@@ -99,7 +99,7 @@ zlogpull::~zlogpull()
     stop();
     ::close(m_pipe[0]);
     ::close(m_pipe[1]);
-    sem_unlink(ZMQLOG_SEM);
+    sem_unlink(ZLOG_SEM);
     sem_close(m_sem);
 }
 
