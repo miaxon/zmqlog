@@ -28,7 +28,7 @@
 
 #include "macrodef.h"
 #include "zlogmsg.h"
-#include "zutils.h"
+//#include "zutils.h"
 
 
 namespace zmqlog {
@@ -106,32 +106,27 @@ namespace zmqlog {
         // inproc logger
 
         zlog(zmqpp::context* pull_ctx, zmqpp::endpoint_t& endpoint) :
-        m_push(*pull_ctx, zmqpp::socket_type::push),
+        m_sock(*pull_ctx, zmqpp::socket_type::push),
         m_frontend(zmqlog::frontend::inproc) {
-            m_push.connect(endpoint);
+            m_sock.connect(endpoint);
         }
 
         // ipc logger
 
         zlog() :
         m_ctx(),
-        m_push(m_ctx, zmqpp::socket_type::push),
+        m_sock(m_ctx, zmqpp::socket_type::push),
         m_frontend(zmqlog::frontend::ipc) {
-            if (m_frontend == zmqlog::frontend::inproc) {
-                throw new zmqlog::zlog_ex("iproc frontend not available for this context.");
-            } else {
-                std::string ep = get_frontend(m_frontend);
-                m_push.connect(ep);
-            }
+            m_sock.connect(ZNODE_IPC);
         }
         
         // tcp logger
 
         zlog(zmqpp::endpoint_t endpoint) :
         m_ctx(),
-        m_push(m_ctx, zmqpp::socket_type::push),
+        m_sock(m_ctx, zmqpp::socket_type::push),
         m_frontend(zmqlog::frontend::tcp) {
-            m_push.connect(endpoint);
+            m_sock.connect(endpoint);
         }
 
         virtual ~zlog() {
@@ -181,7 +176,7 @@ namespace zmqlog {
 
     private:
         zmqpp::context m_ctx;
-        zmqpp::socket m_push;
+        zmqpp::socket m_sock;
         zmqlog::frontend m_frontend;
         std::shared_ptr< LOCK > m_lock{ std::make_shared< LOCK >()};
         fmt::MemoryWriter m_fmt;
@@ -191,7 +186,7 @@ namespace zmqlog {
         void log(const char* fmt, const Args&... args) {
             std::unique_lock< LOCK > lock(*m_lock);
             m_fmt.write(fmt, args...);
-            m_push.send(m_fmt.str(), true);
+            m_sock.send(m_fmt.str(), true);
             m_fmt.clear();
         }
 

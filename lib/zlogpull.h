@@ -30,8 +30,6 @@
 
 namespace zmqlog {
 
-    
-
     class zlogpull {
     public:
         zlogpull();
@@ -53,23 +51,25 @@ namespace zmqlog {
         void set_endpoints();
         void handle_cmd(const zmqpp::message& req, zmqpp::message& rsp);
         void init();
+        bool self_run(zmqpp::socket* pipe);
     private:
+        // initialization list
         zmqpp::context m_ctx;
         zmqpp::socket m_tcp;
         zmqpp::socket m_ipc;
         zmqpp::socket m_inp;
-        zmqpp::socket m_ctl; // control channel
+        zmqpp::socket m_ctl; // control channel   
         volatile bool m_run;
-        int m_frontend;
+        //zmqpp::actor::ActorStartRoutine m_routine;
+        //zmqpp::actor m_self;
+        // end of inititalization list
         std::future<bool> m_fut;
         std::string m_tcp_endpoint;
         std::string m_ipc_endpoint;
         std::string m_ctl_endpoint;
         std::string m_inp_endpoint;
-        int m_pipe[2];
-        sem_t* m_sem;
-        
 
+        int m_pipe[2];
 
     };
 }

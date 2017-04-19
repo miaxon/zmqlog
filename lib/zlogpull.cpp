@@ -19,7 +19,7 @@
 using namespace std;
 using namespace zmqpp;
 using namespace zmqlog;
-
+using namespace std::placeholders;
 namespace zmqlog {
 
 zlogpull::zlogpull() :
@@ -29,22 +29,23 @@ m_ipc(m_ctx, socket_type::pull),
 m_inp(m_ctx, socket_type::pull),
 m_ctl(m_ctx, socket_type::reply),
 m_run(true)
+//,
+//m_routine(&self_run),
+//m_self(m_routine)
 {
     init();
-    o(zutils::zuud());
 }
 
 void
 zlogpull::init()
 {
-    m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL);
-    if (m_sem != SEM_FAILED) {
-        throw zlog_ex("zlogpull can run one instance only", errno);
-    } else {
-        ::pipe2(m_pipe, O_CLOEXEC);
-        set_endpoints();
-        m_fut = async(launch::async, &zlogpull::run, this);
-    }
+    //if (m_run) {
+    //    throw zlog_ex("zlogpull can run one instance only", errno);
+    //} else {
+    ::pipe2(m_pipe, O_CLOEXEC);
+    set_endpoints();
+    m_fut = async(launch::async, &zlogpull::run, this);
+    //}
 }
 
 void
@@ -99,8 +100,8 @@ zlogpull::~zlogpull()
     stop();
     ::close(m_pipe[0]);
     ::close(m_pipe[1]);
-    sem_unlink(ZLOG_SEM);
-    sem_close(m_sem);
+    //sem_unlink(ZLOG_SEM);
+    //sem_close(m_sem);
 }
 
 bool
@@ -222,5 +223,23 @@ zlogpull::in_ctl()
         handle_cmd(msg, rsp);
     m_ctl.send(rsp);
 
+}
+
+bool
+zlogpull::self_run(zmqpp::socket* pipe)
+{
+    message msg;
+    signal sig;
+    pipe->send(signal::ok);
+    while (pipe->receive(msg)) {
+        if (msg.is_signal()) {
+            msg.get(sig, 0);
+            if (sig == zmqpp::signal::stop)
+                break;
+        }
+        o(msg.get(0));
+    }
+    pipe->send(signal::ok);
+    return true;
 }
 }

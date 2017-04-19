@@ -28,12 +28,12 @@ static zlogpull logpull;
 
 
 int main(int argc, char** argv) {
-    getchar();
+    //getchar();
     //auto log = logpull.logger_s();
     //LOG_INTERNAL_MT(log, logpull);
     LOG_IPC_MT(log);
-    //LOG_IPC_ST(logger);    
-    //ZTRACE(logger, "  MT{}{}", 6, 7);
+    LOG_IPC_ST(logger);    
+    ZTRACE(logger, "  MT{}{}", 6, 7);
     //ZTRACE(logger, "  MT{}{}", 6, 7);
     ZDEBUG(log, "Support for int: {0:d};  hex: {0:x};  oct: {0:o}; bin: {0:b}", 42);
 

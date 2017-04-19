@@ -18,10 +18,15 @@
 #define e(x) std::cerr << x << std::endl
 
 #define ZLOG_SEM "zmq_logpull_semaphore_one"
+
+// static strings for socket addresses
+
 #define ZNODE_IPC "ipc:///tmp/.zlog_ipc_pipe"
 #define ZNODE_INTERNAL "inproc:///zlog_inproc_pipe"
 #define ZNODE_TCP "tcp://0.0.0.0:33353"
 #define ZNODE_TCP_CTL "tcp://0.0.0.0:33355"
+
+// macros for create multithread and singlethread loggers 
 
 #define LOG_INTERNAL_ST(x, y) auto x = y.logger_st()
 #define LOG_INTERNAL_MT(x, y) auto x = y.logger_mt()
@@ -32,6 +37,7 @@
 #define LOG_IPC_ST(x) zlogst_ptr x(new zlogst())
 #define LOG_IPC_MT(x) zlogmt_ptr x(new zlogmt())
 
+// sinker's macroses
 
 #define ZSTR_H(x) #x
 #define ZSTR_HELPER(x) ZSTR_H(x)
