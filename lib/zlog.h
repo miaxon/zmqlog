@@ -19,8 +19,7 @@
 #include <chrono>
 #include <mutex>
 #include <fcntl.h>           
-#include <sys/stat.h>       
-#include <semaphore.h>
+#include <sys/stat.h> 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <fmt/time.h>

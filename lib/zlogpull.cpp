@@ -20,6 +20,8 @@ using namespace std;
 using namespace zmqpp;
 using namespace zmqlog;
 using namespace std::placeholders;
+
+zlogpull* zlogpull::self = nullptr;
 namespace zmqlog {
 
 zlogpull::zlogpull() :
@@ -31,19 +33,34 @@ m_ctl(m_ctx, socket_type::reply),
 m_run(true),
 m_self(bind(&zlogpull::self_run, this, placeholders::_1))
 {
-    init();    
-}
+    if (self || (m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED)
+        throw zlog_ex("zlogpull can run one instance only", errno);
 
-void
-zlogpull::init()
-{
-    //if (m_run) {
-    //    throw zlog_ex("zlogpull can run one instance only", errno);
-    //} else {
+
+    self = this;
+
+    std::signal(SIGINT, zlogpull::sighandler);
+    std::signal(SIGILL, zlogpull::sighandler);
+    std::signal(SIGTERM, zlogpull::sighandler);
+    std::signal(SIGSEGV, zlogpull::sighandler);
+    std::signal(SIGABRT, zlogpull::sighandler);
+
     ::pipe2(m_pipe, O_CLOEXEC);
     set_endpoints();
     m_fut = async(launch::async, &zlogpull::run, this);
-    //}
+}
+
+void
+zlogpull::sighandler(int sig)
+{
+    if (self) {
+        self->self_log(fmt::format("sig handler: {} ({})", sig, ::strsignal(sig)));
+        self->stop();
+        ::close(self->m_pipe[0]);
+        ::close(self->m_pipe[1]);
+        sem_unlink(ZLOG_SEM);
+        sem_close(self->m_sem);
+    }
 }
 
 void
@@ -98,8 +115,8 @@ zlogpull::~zlogpull()
     stop();
     ::close(m_pipe[0]);
     ::close(m_pipe[1]);
-    //sem_unlink(ZLOG_SEM);
-    //sem_close(m_sem);
+    sem_unlink(ZLOG_SEM);
+    sem_close(m_sem);
 }
 
 bool
@@ -222,28 +239,31 @@ zlogpull::in_ctl()
     m_ctl.send(rsp);
 
 }
-void 
+
+void
 zlogpull::self_log(string msg)
 {
     m_self.pipe()->send(msg, true);
 }
+
 string
 zlogpull::about()
 {
-    return fmt::format("{} {}\ngit version:{}\ngit url: https://github.com/miaxon/zmqlog.git\nauthor: alexcon315@gmail.com\n{} {} \n", 
+    return fmt::format("{} {}\ngit version:{}\n\n{} {} \n",
             APP_NAME, APP_VER, GIT_VERSION, __DATE__, __TIME__);
 }
+
 bool
 zlogpull::self_run(zmqpp::socket* pipe)
 {
     message msg;
-    signal sig;
+    zmqpp::signal sig;
     pipe->send(signal::ok);
     o(about());
     while (pipe->receive(msg)) {
         if (msg.is_signal()) {
             msg.get(sig, 0);
-            
+
             if (sig == zmqpp::signal::stop)
                 break;
         }

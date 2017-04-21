@@ -23,6 +23,9 @@
 #include <future>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h> 
+#include <semaphore.h>
+#include <csignal>
 
 #include "def.h"
 #include "macrodef.h"
@@ -52,10 +55,11 @@ namespace zmqlog {
         void poll_cancel();
         void set_endpoints();
         void handle_cmd(const zmqpp::message& req, zmqpp::message& rsp);
-        void init();
         bool self_run(zmqpp::socket* pipe);
         void self_log(std::string msg);
         std::string about();
+
+        static void sighandler(int sig);
     private:
         // initialization list
         zmqpp::context m_ctx;
@@ -63,7 +67,7 @@ namespace zmqlog {
         zmqpp::socket m_ipc;
         zmqpp::socket m_inp;
         zmqpp::socket m_ctl; // control channel   
-        volatile bool m_run;
+        std::atomic<bool> m_run;
         zmqpp::actor m_self;
         // end of inititalization list
         std::future<bool> m_fut;
@@ -71,7 +75,9 @@ namespace zmqlog {
         std::string m_ipc_endpoint;
         std::string m_ctl_endpoint;
         std::string m_inp_endpoint;
-
+        sem_t* m_sem;
+        // static members        
+        static zlogpull* self;
         int m_pipe[2];
 
     };
