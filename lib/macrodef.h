@@ -17,6 +17,7 @@
 #define o(x) std::cout << x << std::endl
 #define e(x) std::cerr << x << std::endl
 
+#define ZLOGPULL(x) zmqlog::zlogpull& x = zmqlog::zlogpull::instance();
 #define ZLOG_SEM "zmq_logpull_semaphore_one"
 
 // static strings for socket addresses

@@ -20,7 +20,9 @@ using namespace zmqlog;
 
 
 static string tcp_endpoint("tcp://127.0.0.1:33353");
-static zlogpull logpull;
+
+
+ZLOGPULL(logpull);
 
 /*
  * 

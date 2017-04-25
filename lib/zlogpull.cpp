@@ -21,7 +21,6 @@ using namespace zmqpp;
 using namespace zmqlog;
 using namespace std::placeholders;
 
-zlogpull* zlogpull::self = nullptr;
 namespace zmqlog {
 
 zlogpull::zlogpull() :
@@ -33,11 +32,8 @@ m_ctl(m_ctx, socket_type::reply),
 m_run(true),
 m_self(bind(&zlogpull::self_run, this, placeholders::_1))
 {
-    if (self || (m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED)
+    if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED)
         throw zlog_ex("zlogpull can run one instance only", errno);
-
-
-    self = this;
 
     std::signal(SIGINT, zlogpull::sighandler);
     std::signal(SIGILL, zlogpull::sighandler);
@@ -48,19 +44,19 @@ m_self(bind(&zlogpull::self_run, this, placeholders::_1))
     ::pipe2(m_pipe, O_CLOEXEC);
     set_endpoints();
     m_fut = async(launch::async, &zlogpull::run, this);
+    self_log("now i'm starting ...\n");
 }
 
 void
 zlogpull::sighandler(int sig)
 {
-    if (self) {
-        self->self_log(fmt::format("sig handler: {} ({})", sig, ::strsignal(sig)));
-        self->stop();
-        ::close(self->m_pipe[0]);
-        ::close(self->m_pipe[1]);
-        sem_unlink(ZLOG_SEM);
-        sem_close(self->m_sem);
-    }
+    zlogpull& this_pull = zlogpull::instance();
+    this_pull.self_log(fmt::format("sig handler: {} ({})", sig, ::strsignal(sig)));
+    this_pull.stop();
+    ::close(this_pull.m_pipe[0]);
+    ::close(this_pull.m_pipe[1]);
+    sem_unlink(ZLOG_SEM);
+    sem_close(this_pull.m_sem);
 }
 
 void
@@ -99,7 +95,7 @@ void
 zlogpull::stop()
 {
     if (m_run) {
-        o("stopping ...");
+        self_log("\ni'm stopping ...");
         m_run = false;
         poll_cancel();
         m_fut.wait();
@@ -107,6 +103,7 @@ zlogpull::stop()
         m_ipc.unbind(m_ipc_endpoint);
         m_inp.unbind(m_inp_endpoint);
         m_ctl.unbind(m_ctl_endpoint);
+        self_log("now i'm stopped.");
     }
 }
 
@@ -142,20 +139,19 @@ zlogpull::run()
         } catch (zmqpp::exception& e) {
             o(e.what());
         }
-    }
-    o("~run returned");
+    }    
     //reactor.remove(m_pipe[0]); //crash with sigseg why??
     reactor.remove(m_ctl);
     reactor.remove(m_inp);
     reactor.remove(m_ipc);
     reactor.remove(m_tcp);
+    self_log("poll has stopped");
     return true;
 }
 
 void
 zlogpull::poll_cancel()
 {
-    o("poll_cancel ...");
     char dummy = 1;
     ::write(m_pipe[1], &dummy, 1);
 }
@@ -163,7 +159,6 @@ zlogpull::poll_cancel()
 void
 zlogpull::poll_reset()
 {
-    o("poll_reset ...");
     char dummy = 0;
     ::read(m_pipe[0], &dummy, 1);
 }
@@ -191,7 +186,7 @@ zlogpull::handle_cmd(const message& req, message& rsp)
 }
 
 void
-zlogpull::route(message & msg) const
+zlogpull::route(message & msg)
 {
     o(msg.get(0));
 }
@@ -249,7 +244,7 @@ zlogpull::self_log(string msg)
 string
 zlogpull::about()
 {
-    return fmt::format("{} {}\ngit version:{}\n\n{} {} \n",
+    return fmt::format("{} {}\ngit version:{}\n{} {} \n",
             APP_NAME, APP_VER, GIT_VERSION, __DATE__, __TIME__);
 }
 

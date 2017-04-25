@@ -37,16 +37,22 @@ namespace zmqlog {
 
     class zlogpull {
     public:
-        zlogpull();
-        virtual ~zlogpull();
+        static zlogpull& instance() { // i'm singleton
+            static zlogpull s;
+            return s;
+        }
         void start();
         void stop();
         zlogst_ptr logger_st();
         zlogmt_ptr logger_mt();
 
     private:
+        zlogpull();
+        virtual ~zlogpull();
+        zlogpull(zlogpull&) = delete;
+        zlogpull& operator=(zlogpull const&) = delete;
         bool run();
-        void route(zmqpp::message& msg) const;
+        void route(zmqpp::message& msg);
         void in_tcp();
         void in_ipc();
         void in_inp();
@@ -76,8 +82,7 @@ namespace zmqlog {
         std::string m_ctl_endpoint;
         std::string m_inp_endpoint;
         sem_t* m_sem;
-        // static members        
-        static zlogpull* self;
+        // static members 
         int m_pipe[2];
 
     };

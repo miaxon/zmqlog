@@ -129,7 +129,6 @@ namespace zmqlog {
         }
 
         virtual ~zlog() {
-            o("~zlog");
         };
 
         zmqlog::frontend
