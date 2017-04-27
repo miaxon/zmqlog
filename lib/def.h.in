@@ -14,14 +14,9 @@
 #ifndef DEF_H_IN
 #define DEF_H_IN
 #define APP_NAME "${PROJECT_NAME}"
-#define APP_VER "${VERSION}"
+#define APP_VER "${APPVER}"
 #define GIT_VERSION "${GIT_VERSION}"
 #define CORP_NAME "Monolit"
-#define DEF_TIMEOUT 30
-#define FORMAT_DATE "yyyy-MM-dd"
-#define FORMAT_TIME "hh:mm:ss"
-#define FORMAT_DATETIME "yyyy-MM-dd hh:mm:ss"
-
 
 #endif /* DEF_H_IN */
 

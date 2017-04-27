@@ -12,7 +12,6 @@
  */
 
 #include <cstdlib>
-#include "def.h"
 #include "zlog.h"
 #include "zlogpull.h"
 using namespace std;

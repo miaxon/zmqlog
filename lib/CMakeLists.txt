@@ -2,16 +2,16 @@
 cmake_minimum_required(VERSION 2.8.0)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
+set(APPVER "0.0.2")
 include(GetGitVersion)
 
 # Getting our repository version
 get_git_version(GIT_VERSION)
-string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" VERSION ${GIT_VERSION})
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" APPVER ${GIT_VERSION})
 
-configure_file(def.h.in ${CMAKE_CURRENT_BINARY_DIR}/def.h)
+configure_file(${PROJECT_SOURCE_DIR}/lib/def.h.in ${PROJECT_SOURCE_DIR}/lib/def.h)
 
-message("-- Version: ${VERSION}")
+message("-- Version: ${APPVER}")
 message("-- Corporation: Monolit")
 message(STATUS "Generating build using CMake v${CMAKE_VERSION}")
 
@@ -27,6 +27,6 @@ file(GLOB H_LIST *.h)
 
 
 add_library(zlog SHARED ${SRC_LIST} ${H_LIST})
-target_link_libraries(zlog fmt zmqpp czmq zmq msgpackc)
+target_link_libraries(zlog fmt zmqpp zmq msgpackc)
 
 

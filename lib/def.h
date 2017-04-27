@@ -13,16 +13,10 @@
 
 #ifndef DEF_H_IN
 #define DEF_H_IN
-#define APP_NAME "${PROJECT_NAME}"
-#define APP_VER "${VERSION}"
-#define GIT_VERSION "${GIT_VERSION}"
+#define APP_NAME "zmqlog"
+#define APP_VER "0.0.2"
+#define GIT_VERSION "0.0.2-30fe379-dirty"
 #define CORP_NAME "Monolit"
-#define DEF_TIMEOUT 30
-#define API_VER "0.1-dev"
-#define FORMAT_DATE "yyyy-MM-dd"
-#define FORMAT_TIME "hh:mm:ss"
-#define FORMAT_DATETIME "yyyy-MM-dd hh:mm:ss"
-
 
 #endif /* DEF_H_IN */
 
