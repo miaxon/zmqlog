@@ -30,7 +30,7 @@
 #include "def.h"
 #include "macrodef.h"
 #include "zlog.h"
-
+#include "zpull_event.h"
 
 
 namespace zmqlog {
@@ -51,12 +51,15 @@ namespace zmqlog {
         virtual ~zlogpull();
         zlogpull(zlogpull&) = delete;
         zlogpull& operator=(zlogpull const&) = delete;
-        bool run();
+        bool pull();
         void route(zmqpp::message& msg);
         void in_tcp();
         void in_ipc();
         void in_inp();
         void in_ctl();
+        void mon_ipc();
+        void mon_tcp();
+        void mon_ctl();
         void poll_reset();
         void poll_cancel();
         void set_endpoints();
@@ -64,7 +67,6 @@ namespace zmqlog {
         bool self_run(zmqpp::socket* pipe);
         void self_log(std::string msg);
         std::string about();
-
         static void sighandler(int sig);
     private:
         // initialization list
@@ -75,6 +77,9 @@ namespace zmqlog {
         zmqpp::socket m_ctl; // control channel   
         std::atomic<bool> m_run;
         zmqpp::actor m_self;
+        zmqpp::socket m_mon_ipc;
+        zmqpp::socket m_mon_tcp;
+        zmqpp::socket m_mon_ctl;
         // end of inititalization list
         std::future<bool> m_fut;
         std::string m_tcp_endpoint;
@@ -82,9 +87,7 @@ namespace zmqlog {
         std::string m_ctl_endpoint;
         std::string m_inp_endpoint;
         sem_t* m_sem;
-        // static members 
-        int m_pipe[2];
-
+        int m_pipe[2];  
     };
 }
 #endif /* ZLOGPULL_H */

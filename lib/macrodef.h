@@ -27,6 +27,11 @@
 #define ZNODE_TCP "tcp://0.0.0.0:33353"
 #define ZNODE_TCP_CTL "tcp://0.0.0.0:33355"
 
+#define ZMON_IPC "inproc://zlogpull_mointor_ipc"
+#define ZMON_TCP "inproc://zlogpull_mointor_tcp"
+#define ZMON_CTL "inproc://zlogpull_mointor_ctl"
+
+
 // macros for create multithread and singlethread loggers 
 
 #define LOG_INTERNAL_ST(x, y) auto x = y.logger_st()

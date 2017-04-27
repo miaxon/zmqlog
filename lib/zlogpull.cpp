@@ -30,10 +30,15 @@ m_ipc(m_ctx, socket_type::pull),
 m_inp(m_ctx, socket_type::pull),
 m_ctl(m_ctx, socket_type::reply),
 m_run(true),
-m_self(bind(&zlogpull::self_run, this, placeholders::_1))
+m_self(bind(&zlogpull::self_run, this, placeholders::_1)),
+m_mon_ipc(m_ctx, zmqpp::socket_type::pair),
+m_mon_tcp(m_ctx, zmqpp::socket_type::pair),
+m_mon_ctl(m_ctx, zmqpp::socket_type::pair)
 {
-    if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED)
+    if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED) {
         throw zlog_ex("zlogpull can run one instance only", errno);
+        return;
+    }
 
     std::signal(SIGINT, zlogpull::sighandler);
     std::signal(SIGILL, zlogpull::sighandler);
@@ -43,7 +48,7 @@ m_self(bind(&zlogpull::self_run, this, placeholders::_1))
 
     ::pipe2(m_pipe, O_CLOEXEC);
     set_endpoints();
-    m_fut = async(launch::async, &zlogpull::run, this);
+    m_fut = async(launch::async, &zlogpull::pull, this);
     self_log("now i'm starting ...\n");
 }
 
@@ -87,7 +92,7 @@ zlogpull::start()
 {
     if (!m_run) {
         m_run = true;
-        m_fut = async(launch::async, &zlogpull::run, this);
+        m_fut = async(launch::async, &zlogpull::pull, this);
     }
 }
 
@@ -99,10 +104,6 @@ zlogpull::stop()
         m_run = false;
         poll_cancel();
         m_fut.wait();
-        m_tcp.unbind(m_tcp_endpoint);
-        m_ipc.unbind(m_ipc_endpoint);
-        m_inp.unbind(m_inp_endpoint);
-        m_ctl.unbind(m_ctl_endpoint);
         self_log("now i'm stopped.");
     }
 }
@@ -117,34 +118,64 @@ zlogpull::~zlogpull()
 }
 
 bool
-zlogpull::run()
+zlogpull::pull()
 {
+    try {
+        m_tcp.monitor(ZMON_TCP, event::all);
+        m_mon_tcp.connect(ZMON_TCP);
+        m_ipc.monitor(ZMON_IPC, event::all);
+        m_mon_ipc.connect(ZMON_IPC);
+        m_ctl.monitor(ZMON_CTL, event::all);
+        m_mon_ctl.connect(ZMON_CTL);
+    } catch (zmqpp::exception& e) {
+        o(e.what());
+    }
+
     try {
         m_tcp.bind(m_tcp_endpoint);
         m_ipc.bind(m_ipc_endpoint);
         m_inp.bind(m_inp_endpoint);
-        m_ctl.connect(m_ctl_endpoint);
+        m_ctl.bind(m_ctl_endpoint);
     } catch (zmqpp::exception& e) {
         o(e.what());
     }
+
+
+
     zmqpp::reactor reactor;
     reactor.add(m_tcp, bind(&zlogpull::in_tcp, this));
     reactor.add(m_ipc, bind(&zlogpull::in_ipc, this));
     reactor.add(m_inp, bind(&zlogpull::in_inp, this));
     reactor.add(m_ctl, bind(&zlogpull::in_ctl, this));
     reactor.add(m_pipe[0], bind(&zlogpull::poll_reset, this));
+    reactor.add(m_mon_ipc, bind(&zlogpull::mon_ipc, this));
+    reactor.add(m_mon_tcp, bind(&zlogpull::mon_tcp, this));
+    reactor.add(m_mon_ctl, bind(&zlogpull::mon_ctl, this));
     while (m_run) {
         try {
             reactor.poll();
         } catch (zmqpp::exception& e) {
             o(e.what());
         }
-    }    
+    }
     //reactor.remove(m_pipe[0]); //crash with sigseg why??
     reactor.remove(m_ctl);
     reactor.remove(m_inp);
     reactor.remove(m_ipc);
     reactor.remove(m_tcp);
+    reactor.remove(m_mon_ctl);
+    reactor.remove(m_mon_ipc);
+    reactor.remove(m_mon_tcp);
+    m_tcp.unmonitor();
+    m_ipc.unmonitor();
+    m_ctl.unmonitor();
+    m_mon_tcp.disconnect(ZMON_TCP);
+    m_mon_ipc.disconnect(ZMON_IPC);
+    m_mon_ctl.disconnect(ZMON_CTL);
+    m_tcp.unbind(m_tcp_endpoint);
+    m_ipc.unbind(m_ipc_endpoint);
+    m_inp.unbind(m_inp_endpoint);
+    m_ctl.unbind(m_ctl_endpoint);
     self_log("poll has stopped");
     return true;
 }
@@ -189,6 +220,36 @@ void
 zlogpull::route(message & msg)
 {
     o(msg.get(0));
+}
+
+void
+zlogpull::mon_ipc()
+{
+    if (!m_run) return;
+    message msg;
+    m_mon_ipc.receive(msg);
+    zpull_event ev(msg);
+    self_log(ev.to_string());
+}
+
+void
+zlogpull::mon_ctl()
+{
+    if (!m_run) return;
+    message msg;
+    m_mon_ctl.receive(msg);
+    zpull_event ev(msg);
+    self_log(ev.to_string());
+}
+
+void
+zlogpull::mon_tcp()
+{
+    if (!m_run) return;
+    message msg;
+    m_mon_tcp.receive(msg);
+    zpull_event ev(msg);
+    self_log(ev.to_string());
 }
 
 void
@@ -244,8 +305,10 @@ zlogpull::self_log(string msg)
 string
 zlogpull::about()
 {
-    return fmt::format("{} {}\ngit version:{}\n{} {} \n",
-            APP_NAME, APP_VER, GIT_VERSION, __DATE__, __TIME__);
+    uint8_t major, minor, patch;
+    zmqpp::zmq_version(major, minor, patch);
+    return fmt::format("{} {}\ngit version:{}\nzmq version: {}.{}.{}\n{} {} \n",
+            APP_NAME, APP_VER, GIT_VERSION, major, minor, patch, __DATE__, __TIME__);
 }
 
 bool

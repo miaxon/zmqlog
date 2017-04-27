@@ -25,6 +25,7 @@
 #include <fmt/time.h>
 #include <zmqpp/zmqpp.hpp>
 
+#include "def.h"
 #include "macrodef.h"
 #include "zlogmsg.h"
 //#include "zutils.h"
@@ -108,6 +109,7 @@ namespace zmqlog {
         m_sock(*pull_ctx, zmqpp::socket_type::push),
         m_frontend(zmqlog::frontend::inproc) {
             m_sock.connect(endpoint);
+            about();
         }
 
         // ipc logger
@@ -117,8 +119,9 @@ namespace zmqlog {
         m_sock(m_ctx, zmqpp::socket_type::push),
         m_frontend(zmqlog::frontend::ipc) {
             m_sock.connect(ZNODE_IPC);
+            about();
         }
-        
+
         // tcp logger
 
         zlog(zmqpp::endpoint_t endpoint) :
@@ -126,6 +129,7 @@ namespace zmqlog {
         m_sock(m_ctx, zmqpp::socket_type::push),
         m_frontend(zmqlog::frontend::tcp) {
             m_sock.connect(endpoint);
+            about();
         }
 
         virtual ~zlog() {
@@ -178,6 +182,7 @@ namespace zmqlog {
         zmqlog::frontend m_frontend;
         std::shared_ptr< LOCK > m_lock{ std::make_shared< LOCK >()};
         fmt::MemoryWriter m_fmt;
+        
     private:
 
         template <typename... Args>
@@ -186,6 +191,15 @@ namespace zmqlog {
             m_fmt.write(fmt, args...);
             m_sock.send(m_fmt.str(), true);
             m_fmt.clear();
+        }
+
+        void about() {
+            uint8_t major, minor, patch;
+            zmqpp::zmq_version(major, minor, patch);
+            std::string str;
+            m_sock.get(zmqpp::socket_option::last_endpoint, str);
+            log("{} {}\ngit version:{}\nzmq version: {}.{}.{}\nfrontend: {}\n{} {} \n",
+                    APP_NAME, APP_VER, GIT_VERSION, major, minor, patch, str, __DATE__, __TIME__);
         }
     };
     using zlogst = zlog<null_lock_t>;

@@ -33,7 +33,8 @@ int main(int argc, char** argv) {
     //getchar();
     //auto log = logpull.logger_s();
     //LOG_INTERNAL_MT(log, logpull);
-    LOG_IPC_MT(log);
+    LOG_TCP_ST(log, tcp_endpoint);
+    //LOG_IPC_MT(log);
     LOG_IPC_ST(logger);    
     ZTRACE(logger, "  MT{}{}", 6, 7);
     //ZTRACE(logger, "  MT{}{}", 6, 7);
