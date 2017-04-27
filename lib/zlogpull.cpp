@@ -35,7 +35,7 @@ m_mon_ipc(m_ctx, zmqpp::socket_type::pair),
 m_mon_tcp(m_ctx, zmqpp::socket_type::pair),
 m_mon_ctl(m_ctx, zmqpp::socket_type::pair)
 {
-    if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) != SEM_FAILED) {
+    if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED) {
         throw zlog_ex("zlogpull can run one instance only", errno);
         return;
     }
