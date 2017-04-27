@@ -35,10 +35,10 @@ m_mon_ipc(m_ctx, zmqpp::socket_type::pair),
 m_mon_tcp(m_ctx, zmqpp::socket_type::pair),
 m_mon_ctl(m_ctx, zmqpp::socket_type::pair)
 {
-    if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED) {
-        throw zlog_ex("zlogpull can run one instance only", errno);
-        return;
-    }
+    //if ((m_sem = sem_open(ZLOG_SEM, O_CREAT | O_EXCL)) == SEM_FAILED) {
+    //    throw zlog_ex("zlogpull can run one instance only", errno);
+    //    return;
+    //}
 
     std::signal(SIGINT, zlogpull::sighandler);
     std::signal(SIGILL, zlogpull::sighandler);
@@ -57,11 +57,7 @@ zlogpull::sighandler(int sig)
 {
     zlogpull& this_pull = zlogpull::instance();
     this_pull.self_log(fmt::format("sig handler: {} ({})", sig, ::strsignal(sig)));
-    this_pull.stop();
-    ::close(this_pull.m_pipe[0]);
-    ::close(this_pull.m_pipe[1]);
-    sem_unlink(ZLOG_SEM);
-    sem_close(this_pull.m_sem);
+    this_pull.destroy();
 }
 
 void
@@ -108,13 +104,19 @@ zlogpull::stop()
     }
 }
 
-zlogpull::~zlogpull()
+void
+zlogpull::destroy()
 {
     stop();
     ::close(m_pipe[0]);
     ::close(m_pipe[1]);
-    sem_unlink(ZLOG_SEM);
-    sem_close(m_sem);
+    //sem_unlink(ZLOG_SEM);
+    //sem_close(m_sem);
+}
+
+zlogpull::~zlogpull()
+{
+    destroy();
 }
 
 bool

@@ -51,6 +51,7 @@ namespace zmqlog {
         virtual ~zlogpull();
         zlogpull(zlogpull&) = delete;
         zlogpull& operator=(zlogpull const&) = delete;
+        void destroy();
         bool pull();
         void route(zmqpp::message& msg);
         void in_tcp();

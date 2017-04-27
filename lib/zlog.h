@@ -199,7 +199,7 @@ namespace zmqlog {
             std::string str;
             m_sock.get(zmqpp::socket_option::last_endpoint, str);
             log("{} {}\ngit version:{}\nzmq version: {}.{}.{}\nfrontend: {}\n{} {} \n",
-                    APP_NAME, APP_VER, GIT_VERSION, major, minor, patch, str, __DATE__, __TIME__);
+                    "zmqlog client", APP_VER, GIT_VERSION, major, minor, patch, str, __DATE__, __TIME__);
         }
     };
     using zlogst = zlog<null_lock_t>;
