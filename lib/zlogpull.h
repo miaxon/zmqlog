@@ -23,8 +23,6 @@
 #include <future>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h> 
-#include <semaphore.h>
 #include <csignal>
 
 #include "def.h"
@@ -87,7 +85,6 @@ namespace zmqlog {
         std::string m_ipc_endpoint;
         std::string m_ctl_endpoint;
         std::string m_inp_endpoint;
-        sem_t* m_sem;
         int m_pipe[2];  
     };
 }

@@ -15,7 +15,7 @@
 #define DEF_H_IN
 #define APP_NAME "zmqlog"
 #define APP_VER "0.0.2"
-#define GIT_VERSION "0.0.2-4503f48-dirty"
+#define GIT_VERSION "0.0.2-33e8677"
 #define CORP_NAME "Monolit"
 
 #endif /* DEF_H_IN */
