@@ -81,8 +81,8 @@ zlogpull::logger_mt()
 void
 zlogpull::start()
 {
-    if (!m_run) {
-        m_run = true;
+    if (!m_run.load()) {
+        m_run.store(true);
         m_fut = async(launch::async, &zlogpull::pull, this);
     }
 }
@@ -90,9 +90,9 @@ zlogpull::start()
 void
 zlogpull::stop()
 {
-    if (m_run) {
+    if (m_run.load()) {
         self_log("\ni'm stopping ...");
-        m_run = false;
+        m_run.store(false);
         poll_cancel();
         m_fut.wait();
         self_log("now i'm stopped.");
@@ -220,7 +220,7 @@ zlogpull::route(message & msg)
 void
 zlogpull::mon_ipc()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     message msg;
     m_mon_ipc.receive(msg);
     zpull_event ev(msg);
@@ -230,7 +230,7 @@ zlogpull::mon_ipc()
 void
 zlogpull::mon_ctl()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     message msg;
     m_mon_ctl.receive(msg);
     zpull_event ev(msg);
@@ -240,7 +240,7 @@ zlogpull::mon_ctl()
 void
 zlogpull::mon_tcp()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     message msg;
     m_mon_tcp.receive(msg);
     zpull_event ev(msg);
@@ -250,7 +250,7 @@ zlogpull::mon_tcp()
 void
 zlogpull::in_tcp()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     message msg;
     m_tcp.receive(msg);
     if (msg.parts())
@@ -260,7 +260,7 @@ zlogpull::in_tcp()
 void
 zlogpull::in_ipc()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     zmqpp::message msg;
     m_ipc.receive(msg);
     if (msg.parts())
@@ -270,7 +270,7 @@ zlogpull::in_ipc()
 void
 zlogpull::in_inp()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     message msg;
     m_inp.receive(msg);
     if (msg.parts())
@@ -280,7 +280,7 @@ zlogpull::in_inp()
 void
 zlogpull::in_ctl()
 {
-    if (!m_run) return;
+    if (!m_run.load()) return;
     self_log("in_ctl");
     message msg;
     message rsp;
